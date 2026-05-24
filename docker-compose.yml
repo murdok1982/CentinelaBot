@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  centinela:
+    build: .
+    container_name: centinela
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-cambiar-en-produccion}
+      JWT_SECRET: ${JWT_SECRET:-jwt-cambiar-en-produccion}
+      DATABASE_URL: postgresql://centinela:centinela@db:5432/centinela
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: http://ollama:11434
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+
+  db:
+    image: postgres:16-alpine
+    container_name: centinela-db
+    environment:
+      POSTGRES_USER: centinela
+      POSTGRES_PASSWORD: centinela
+      POSTGRES_DB: centinela
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U centinela"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: centinela-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  ollama_data:

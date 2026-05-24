@@ -1,16 +1,46 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.env
-.venv
+.Python
+build/
+dist/
+*.egg-info/
 venv/
-.DS_Store
-Thumbs.db
+env/
+.venv/
+
+# Database
+*.db
+*.sqlite
+data/
+
+# Logs
+logs/
+*.log
+
+# Secrets
+config.ini
+secrets.json
+*.key
+*.pem
+
+# IDEs
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+
+# OS
 *.swp
 *.swo
-*.log
+
+# ML Models
 *.gguf
 *.ggml
 *.bin

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Panel de Seguridad</h1>
+    <div class="status-badge" id="statusBadge">Cargando...</div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Amenazas Detectadas</div>
+        <div class="stat-value" id="statThreats">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Alertas Activas</div>
+        <div class="stat-value warning" id="statAlerts">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Eventos Procesados</div>
+        <div class="stat-value" id="statEvents">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Security Score</div>
+        <div class="stat-value" id="statScore">-</div>
+    </div>
+</div>
+
+<div class="charts-grid">
+    <div class="chart-card">
+        <h3>Distribucion de Amenazas</h3>
+        <canvas id="threatChart"></canvas>
+    </div>
+    <div class="chart-card">
+        <h3>Severidad de Alertas</h3>
+        <canvas id="severityChart"></canvas>
+    </div>
+</div>
+
+<div class="activity-section">
+    <h3>Estado de Modulos</h3>
+    <div class="module-grid" id="moduleGrid">
+        <div class="module-item"><span>AI Analyzer</span><span class="status-dot" id="modAi">?</span></div>
+        <div class="module-item"><span>Threat Detector</span><span class="status-dot" id="modThreat">?</span></div>
+        <div class="module-item"><span>Alert Manager</span><span class="status-dot" id="modAlert">?</span></div>
+        <div class="module-item"><span>SIEM</span><span class="status-dot" id="modSiem">?</span></div>
+        <div class="module-item"><span>Dashboard</span><span class="status-dot" id="modDash">?</span></div>
+    </div>
+</div>
+{% endblock %}

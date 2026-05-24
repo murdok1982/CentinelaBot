@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Alertas{% endblock %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Alertas de Seguridad</h1>
+    <button class="btn-refresh" onclick="loadAlerts()">Actualizar</button>
+</div>
+
+<div class="alert-filters">
+    <input type="text" id="filterSearch" placeholder="Buscar alertas..." oninput="filterAlerts()">
+    <select id="filterSeverity" onchange="filterAlerts()">
+        <option value="">Todas las severidades</option>
+        <option value="critical">Critica</option>
+        <option value="high">Alta</option>
+        <option value="medium">Media</option>
+        <option value="low">Baja</option>
+    </select>
+</div>
+
+<table class="alerts-table" id="alertsTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Titulo</th>
+            <th>Severidad</th>
+            <th>Estado</th>
+            <th>Fuente</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody id="alertsBody">
+        <tr><td colspan="6">Cargando alertas...</td></tr>
+    </tbody>
+</table>
+{% endblock %}

@@ -1,158 +1,83 @@
-import hispan_shield_guardian  # noqa: F401
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-CentinelaBot - SaaS de Gestión de Ciberseguridad con IA
-Autor: murdok1982
-Licencia: MIT
-"""
-
 import os
+import sys
 import logging
-from flask import Flask, render_template, jsonify, request
-from flask_cors import CORS
-from dotenv import load_dotenv
+import threading
 import colorlog
-from datetime import datetime
-import json
 
-from modules.ai_analyzer import AIAnalyzer
-from modules.threat_detector import ThreatDetector
-from modules.alert_manager import AlertManager
-from modules.siem_integration import SIEMIntegration
-from modules.dashboard_data import DashboardData
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Configuración de logging con colores
+import hispan_shield_guardian  # noqa: F401
+from flask import Flask, render_template
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+from config import Config
+from src.centinela.extensions import db, migrate
+from src.centinela.routes import api_bp, auth_bp, telegram_bp
+from src.centinela.routes.auth import init_admin
+from src.centinela.routes.telegram_bot import init_telegram_bot
+
 handler = colorlog.StreamHandler()
 handler.setFormatter(colorlog.ColoredFormatter(
-    '%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    log_colors={
-        'DEBUG': 'cyan',
-        'INFO': 'green',
-        'WARNING': 'yellow',
-        'ERROR': 'red',
-        'CRITICAL': 'red,bg_white',
-    }
+    "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    log_colors={"DEBUG": "cyan", "INFO": "green", "WARNING": "yellow", "ERROR": "red", "CRITICAL": "red,bg_white"}
 ))
+root_logger = logging.getLogger()
+root_logger.addHandler(handler)
+root_logger.setLevel(logging.INFO)
 
-logger = colorlog.getLogger('CentinelaBot')
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-# Cargar variables de entorno
-load_dotenv()
-
-# Inicializar Flask
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
-CORS(app)
-
-# Inicializar módulos
-ai_analyzer = AIAnalyzer()
-threat_detector = ThreatDetector()
-alert_manager = AlertManager()
-siem = SIEMIntegration()
-dashboard = DashboardData()
-
-logger.info('🛡️ CentinelaBot iniciado correctamente')
+logger = logging.getLogger("centinela")
 
 
-@app.route('/')
-def index():
-    """Página principal"""
-    return jsonify({
-        'app': 'CentinelaBot',
-        'version': '1.0.0',
-        'status': 'running',
-        'message': '🛡️ Sistema de Gestión de Ciberseguridad con IA activo',
-        'endpoints': {
-            '/': 'Información del sistema',
-            '/api/dashboard': 'Datos del dashboard',
-            '/api/threats': 'Amenazas detectadas',
-            '/api/analyze': 'Analizar evento con IA',
-            '/api/alerts': 'Alertas activas',
-            '/api/health': 'Estado del sistema'
-        }
-    })
+def create_app():
+    app = Flask(__name__, template_folder="src/centinela/templates", static_folder="src/centinela/static")
+    app.config["SECRET_KEY"] = Config.SECRET_KEY
+    app.config["SQLALCHEMY_DATABASE_URI"] = Config.DATABASE_URL
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["JWT_SECRET_KEY"] = Config.JWT_SECRET
+
+    CORS(app)
+    db.init_app(app)
+    migrate.init_app(app, db)
+    JWTManager(app)
+
+    app.register_blueprint(api_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(telegram_bp)
+
+    with app.app_context():
+        db.create_all()
+        init_admin()
+
+    @app.route("/dashboard")
+    def dashboard():
+        return render_template("dashboard.html")
+
+    @app.route("/alerts")
+    def alerts_page():
+        return render_template("alerts.html")
+
+    @app.route("/login")
+    def login_page():
+        return render_template("login.html")
+
+    logger.info("CentinelaBot v2.0 iniciado correctamente")
+    return app
 
 
-@app.route('/api/dashboard')
-def get_dashboard():
-    """Obtener datos del dashboard"""
-    try:
-        data = dashboard.get_summary()
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f'Error obteniendo dashboard: {e}')
-        return jsonify({'error': str(e)}), 500
+app = create_app()
 
 
-@app.route('/api/threats')
-def get_threats():
-    """Obtener amenazas detectadas"""
-    try:
-        threats = threat_detector.get_recent_threats()
-        return jsonify(threats)
-    except Exception as e:
-        logger.error(f'Error obteniendo amenazas: {e}')
-        return jsonify({'error': str(e)}), 500
+def start_telegram():
+    if Config.check_telegram():
+        logger.info("Iniciando bot de Telegram en segundo plano...")
+        t = threading.Thread(target=init_telegram_bot, args=(app,), daemon=True)
+        t.start()
 
 
-@app.route('/api/analyze', methods=['POST'])
-def analyze_event():
-    """Analizar evento con IA"""
-    try:
-        event_data = request.get_json()
-        if not event_data:
-            return jsonify({'error': 'No se proporcionaron datos'}), 400
-        
-        analysis = ai_analyzer.analyze_security_event(event_data)
-        
-        # Si es una amenaza crítica, crear alerta
-        if analysis.get('severity') in ['high', 'critical']:
-            alert_manager.create_alert(analysis)
-        
-        return jsonify(analysis)
-    except Exception as e:
-        logger.error(f'Error analizando evento: {e}')
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/alerts')
-def get_alerts():
-    """Obtener alertas activas"""
-    try:
-        alerts = alert_manager.get_active_alerts()
-        return jsonify(alerts)
-    except Exception as e:
-        logger.error(f'Error obteniendo alertas: {e}')
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/health')
-def health_check():
-    """Estado del sistema"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'modules': {
-            'ai_analyzer': ai_analyzer.is_healthy(),
-            'threat_detector': threat_detector.is_healthy(),
-            'alert_manager': alert_manager.is_healthy(),
-            'siem': siem.is_healthy()
-        }
-    })
-
-
-if __name__ == '__main__':
-    port = int(os.getenv('FLASK_PORT', 5000))
-    env = os.getenv('FLASK_ENV', 'development')
-    
-    logger.info(f'🚀 Iniciando CentinelaBot en puerto {port}')
-    logger.info(f'📊 Dashboard disponible en http://localhost:{port}')
-    
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=(env == 'development')
-    )
+if __name__ == "__main__":
+    start_telegram()
+    app.run(host="0.0.0.0", port=Config.FLASK_PORT, debug=Config.DEBUG)
