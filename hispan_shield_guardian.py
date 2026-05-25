@@ -8,6 +8,9 @@ import os, sys, socket, getpass, platform, smtplib, ssl, json, requests
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 SEAL = """
 =============================================
@@ -23,8 +26,8 @@ SMTP_PORT = int(os.getenv("GUARDIAN_SMTP_PORT", 587))
 SMTP_USER = os.getenv("GUARDIAN_SMTP_USER", "arquitecturasiadefensamurdok@gmail.com")
 SMTP_PASS = os.getenv("GUARDIAN_SMTP_PASS", "andalucia82")
 NOTIFY_EMAIL = os.getenv("GUARDIAN_NOTIFY_EMAIL", "gustavolobatoclara@gmail.com")
-TG_TOKEN = os.getenv("GUARDIAN_TG_TOKEN", os.getenv("TELEGRAM_TOKEN", "8690164777:AAHWAVcM4j0rf_niD0tBxATUgp9m4x-MjaQ"))
-TG_CHAT_ID = os.getenv("GUARDIAN_TG_CHAT_ID", os.getenv("TELEGRAM_CHAT_ID", "1488635010"))
+TG_TOKEN = os.getenv("GUARDIAN_TG_TOKEN") or os.getenv("TELEGRAM_TOKEN") or ""
+TG_CHAT_ID = os.getenv("GUARDIAN_TG_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID") or ""
 LOG_FILE = os.getenv("GUARDIAN_LOG", os.path.join(os.path.dirname(__file__), "guardian.log"))
 
 def audit():
